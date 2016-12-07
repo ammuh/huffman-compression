@@ -4,6 +4,9 @@
 #include <ctype.h>
 #include <string.h>
 
+/*
+	Both methods free data structures used for compression and decompression.
+*/
 
 void deleteTree(){
 	//TODO: Write a function that deletes(frees) the data structure
@@ -17,6 +20,13 @@ void deleteList(){
 	freeList();
 }
 
+/*
+	Reads a file character by character and writes the given code to the output file.
+	Codes are looked up on O(1) as the codes are stored in the array using the ASCII
+	value as the index.
+	8 Bits are queded up before being written to file. This was done because some codes
+	are the size of no datatype that exists in C.
+*/
 void compress(char * filename, char * output){
 	if(!addrs){
 		printf("Error: Huffman codes not loaded\n");
@@ -32,6 +42,7 @@ void compress(char * filename, char * output){
 		addr = geta(c);
 		int i;
 		for(i = 0; i < strlen(addr); i++){
+			//Based on 1 or 0, bitstring is leftshifted with the new bit added to the end
 			if(addr[i] == '0'){
 				bitstring<<=1;
 				bits++;
@@ -42,7 +53,7 @@ void compress(char * filename, char * output){
 			}else{
 				printf("Corrupt binary address\n");
 			}
-
+			//If bitstring is at max capacity, write it to file and reset
 			if(bits == 8){
 				fwrite(&bitstring, sizeof(unsigned char), 1, o);
 				bits = 0;
@@ -51,6 +62,7 @@ void compress(char * filename, char * output){
 		}
 		c = (char)fgetc(f);
 	}
+	//Final flush of bits to file to handle odd number of bits in some compressed files
 	while(bits < 8){
 		bitstring<<=1;
 		bits++;
@@ -61,6 +73,14 @@ void compress(char * filename, char * output){
 	fclose(f);
 	fclose(o);
 }
+
+/*
+	Decompression reads bitstring, and traverses the B tree till a root is discovered.
+	The character is printed to output, and the readin continues.
+	Each time the bitstring overflows, it is emptied and reset.
+	Bitcode to character conversion is done in O(log(n)), however this BTree is the best option
+	as the size of each bitcode is unknown when reading it from the compressed file.
+*/
 
 void decompress(char * filename, char * output){
 	if(!h){
@@ -76,9 +96,10 @@ void decompress(char * filename, char * output){
 	while(fread(&bitstring, sizeof(unsigned char), 1,f)){
 		while(bits){
 			if(ptr->val){
-				fprintf(o, "%c", ptr->val);
+				fprintf(o, "%c", ptr->val); //Write character to file
 				ptr = h;
 			}else{
+				//Handle if bit is 1 or 0, only traverses if child exists, otherwise resets
 				if(bitstring & 0b10000000){
 					if(ptr->_1){
 						ptr = ptr->_1;
@@ -98,6 +119,7 @@ void decompress(char * filename, char * output){
 				bitstring<<=1;
 			}
 		}
+		//Handle edge case if BTree ends at root
 		if(ptr->val){
 				fprintf(o, "%c", ptr->val);
 				ptr = h;
@@ -108,7 +130,10 @@ void decompress(char * filename, char * output){
 	fclose(o);
 }
 
-
+/*
+	Helper method that will trim tokens from Huffman code files to ensure no whitespaces
+	or newline characters are included in the address.
+*/
 char *trim(char *str)
 {
   char *end;
@@ -125,10 +150,13 @@ char *trim(char *str)
 
   return str;
 }
-
+/*
+	Based on filename and compresssion or decompression, the Huffman codes are loaded into the
+	appropriate datastructure (BTree for decompression, 1D Array for compression)	
+*/
 void loadCode(char * filename, int comp){
 	if(comp){
-		cinit(96);
+		cinit(96); //96 printable ASCII characters that exist
 	}else{
 		binit();
 	}
@@ -147,6 +175,7 @@ void loadCode(char * filename, int comp){
     }
     fclose(f);
 }
+
 /*	Parse the command inputs:
 *
 *	argv[0] is always program name
@@ -172,6 +201,7 @@ void loadCode(char * filename, int comp){
 *	./huffman <-c|-d> <PATHTOSOURCE> --code <PATHTOCODE> [-p <PATHTODEST>]
 */
 int main(int argc, char const *argv[]) {
+	// Handle all arguments
 	if((argc-1) %2 != 0 || argc == 1){
 		printf("Usage: <-c|-d> <PATHTOSOURCE> --code <PATHTOCODE> [-p <PATHTODEST>]\n");
 		return -1;
@@ -215,10 +245,14 @@ int main(int argc, char const *argv[]) {
 			break;
 		}
 	}
+
+	//Call functions based on compression or decompression
+
 	if(filedecsrc){
 		loadCode(codefile, 0);
 		decompress(filedecsrc, fileout);
 		deleteTree();
+		//Free arguments
 		free(codefile);
 		free(filedecsrc);
 		free(fileout);
@@ -226,6 +260,7 @@ int main(int argc, char const *argv[]) {
 		loadCode(codefile, 1);
 		compress(filecompsrc, fileout);
 		deleteList();
+		//Free arguments
 		free(codefile);
 		free(filecompsrc);
 		free(fileout);

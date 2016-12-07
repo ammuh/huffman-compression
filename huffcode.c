@@ -5,18 +5,26 @@
 #include "huffcode.h"
 
 //Decompression
+
+/*
+	Initializes a BTree
+*/
 Node * binit(){
 	h = malloc(sizeof(Node));
 	h->_0 = NULL;
 	h->_1 = NULL;
 	return h;
 }
-
+/*
+	Loads an existing BTree
+*/
 int bload(Node * n){
 	h = n;
 	return 0;
 }
-
+/*
+	Creates bitstring from a given BTree address in string form
+*/
 unsigned long genBitString(char * addr){
 	int i = 0;
 	unsigned long bitstring = 0;
@@ -33,7 +41,9 @@ unsigned long genBitString(char * addr){
 	return bitstring;
 
 }
-
+/*
+	Returns character at a given address
+*/
 char get(char * addr){
 	int len = strlen(addr);
 	Node * n = traverse(h, genBitString(addr), &len, 0);
@@ -43,7 +53,10 @@ char get(char * addr){
 		return -1;
 	}
 }
-
+/*
+	Adds a char value at the root of a tree, if childs don't exist, they are created
+	at runtime
+*/
 int addr(char c, char * addr){
 	int len = strlen(addr);
 	Node * n = traverse(h, genBitString(addr), &len, 1);
@@ -54,7 +67,12 @@ int addr(char c, char * addr){
 		printf("Address is not a root of the tree.\n");
 		return -1;
 	}
-} //Adds elements recursively
+}
+
+/*
+	Traverses a tree based on a given bitstring, returns farthest element it got to.
+	Has option for recursively adding elements or stopping at lowest BTree level.
+*/
 
 Node * traverse(Node * head, unsigned long bitstring, int * bits, int add){
 	Node * elem = head;
@@ -88,6 +106,7 @@ Node * traverse(Node * head, unsigned long bitstring, int * bits, int add){
 	return elem;
 }
 
+//Helper method for printing a given tree
 void strrev(char *p)
 {
   char *q = p;
@@ -98,6 +117,7 @@ void strrev(char *p)
     *p = *p ^ *q;
 }
 
+//Helper method that prints a given BTree recursively
 void printTree(Node * elem, char * addr){
 	if(!elem){
 		elem = h;
@@ -123,8 +143,32 @@ void printTree(Node * elem, char * addr){
 	}
 }
 
+//Recursive method that frees a given element and all its children
+void freeBranch(Node * n){
+	if(n){
+		freeBranch(n->_0);
+		freeBranch(n->_1);
+		free(n);
+	}
+}
+
+/*
+	Frees memory from BTree
+*/
+void freeTree(){
+	if(!h){
+		return;
+	}
+	freeBranch(h->_0);
+	freeBranch(h->_1);
+	free(h);
+}
+
 //Compression
 
+/*
+	Intializes array of bitcodes
+*/
 int cinit(int n){
 	addrs = malloc(n*sizeof(char *));
 	ASCII_OFFSET = 32;
@@ -132,6 +176,9 @@ int cinit(int n){
 	return 0;
 }
 
+/*
+	Adds an address/bitcode for a given character
+*/
 int add(char c, char * addr){
 	if(c <32 || c > 127){
 		printf("Error: ASCII Value out of printable range\n");
@@ -141,10 +188,17 @@ int add(char c, char * addr){
 	return 0;
 }
 
+/*
+	Gets the address/bitcode for a certain character. Since the array indexes are based on the
+	ASCII codes, the bitcode is added in 1 operation.
+*/
 char * geta(char c){
 	return addrs[((int)c) - ASCII_OFFSET];
 }
 
+/*
+	Frees the array of bitcodes
+*/
 void freeList(){
 	if(!elems){
 		return;
@@ -157,21 +211,3 @@ void freeList(){
 	}
 	free(addrs);
 }
-
-void freeBranch(Node * n){
-	if(n){
-		freeBranch(n->_0);
-		freeBranch(n->_1);
-		free(n);
-	}
-}
-
-void freeTree(){
-	if(!h){
-		return;
-	}
-	freeBranch(h->_0);
-	freeBranch(h->_1);
-	free(h);
-}
-
